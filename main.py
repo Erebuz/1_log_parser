@@ -1,4 +1,4 @@
-def main():
+def main() -> None:
     print("Hello from 1-log-parser!")
 
 
