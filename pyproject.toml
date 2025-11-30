@@ -14,6 +14,7 @@ dev = [
     "flake8>=7.3.0",
     "isort>=7.0.0",
     "mypy>=1.19.0",
+    "pyupgrade>=3.21.2",
 ]
 
 [tool.flake8]
