@@ -6,3 +6,6 @@ PROJECT_NAME = 1_log_parser
 
 run:
 	$(PYTHON) ./main.py
+
+lint:
+	pre-commit run --all-files --color=never
