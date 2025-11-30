@@ -7,7 +7,7 @@ PROJECT_NAME = 1_log_parser
 .PHONY: run lint
 
 run:
-	$(PYTHON) ./main.py
+	$(PYTHON) ./run.py --config config/base.yaml
 
 lint:
 	pre-commit run --all-files --color=never

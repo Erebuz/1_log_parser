@@ -1,0 +1,8 @@
+[flake8]
+max-line-length = 176
+ignore = E203,W503,E501
+max-complexity = 12
+max-doc-length = 120
+inline-quotes = single
+show-source = true
+statistics = false

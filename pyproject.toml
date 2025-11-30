@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "pyyaml>=6.0.3",
     "structlog>=25.5.0",
 ]
 
@@ -12,23 +13,11 @@ dependencies = [
 dev = [
     "black>=25.11.0",
     "flake8>=7.3.0",
+    "flake8-pyproject>=1.2.4",
     "isort>=7.0.0",
     "mypy>=1.19.0",
     "pyupgrade>=3.21.2",
 ]
-
-[tool.flake8]
-max-line-length = 176
-ignore = [
-    "E203",  # пробел перед ':'
-    "W503",  # разрыв строки перед бинарным оператором
-    "E501",  # длина строки (обычно управляется black)
-]
-max-complexity = 12
-max-doc-length = 120
-inline-quotes = "single"
-show-source = true
-statistics = false
 
 [tool.isort]
 profile = "black"
@@ -40,7 +29,10 @@ use_parentheses = true
 [tool.black]
 line-length = 176
 
-target-version = ['py312', 'py313']
+target-version = [
+    'py312',
+    'py313'
+]
 
 [tool.mypy]
 python_version = "3.13"
