@@ -4,6 +4,8 @@ PYTHON = $(BIN)/python
 
 PROJECT_NAME = 1_log_parser
 
+.PHONY: run lint
+
 run:
 	$(PYTHON) ./main.py
 
