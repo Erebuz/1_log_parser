@@ -4,16 +4,22 @@ import json
 import os
 import tomllib
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
-BASE_CONFIG = {"test": "test"}
+from src.app import App
+from src.interfaces import BaseConfig
+
+BASE_CONFIG = {
+    "LOG_DIR": "logs",
+    "REPORT_DIR": "reports",
+}
+
+root = os.path.dirname(__file__)
 
 
 def load_config(config_path: str) -> dict[str, Any]:
-    root = os.path.dirname(__file__)
-
     path = Path(root, config_path)
 
     if path.suffix == ".json":
@@ -35,10 +41,11 @@ def load_config(config_path: str) -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, required=True)
+    parser.add_argument("--config", type=str, required=False)
     args = parser.parse_args()
 
-    loaded_config = load_config(args.config)
+    loaded_config = load_config(args.config) if args.config else None
     config = BASE_CONFIG | loaded_config if loaded_config else BASE_CONFIG
 
-    print(config)
+    app = App(root, cast(BaseConfig, config))
+    app.run()
