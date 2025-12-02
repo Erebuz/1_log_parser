@@ -129,8 +129,8 @@ class App:
             time_total += log.duration
 
             # TODO: delete
-            if lines_counter - errors_counter >= 1000:
-                break
+            # if lines_counter - errors_counter >= 1000:
+            #     break
 
         for log_stat in urls_statistics.values():
             lines_correct_total = lines_counter - errors_counter

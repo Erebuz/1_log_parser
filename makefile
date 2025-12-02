@@ -14,3 +14,6 @@ lint:
 
 test:
 	uv run pytest
+
+build_docker:
+	docker build -t log-parser:latest .
