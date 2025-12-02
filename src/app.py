@@ -1,18 +1,16 @@
-import dataclasses
 import gzip
 import json
 import re
 from datetime import datetime
 from pathlib import Path
-from statistics import median
 from string import Template
-from typing import Dict, Generator, List
+from typing import Dict, Generator
 
 import structlog
 
 from src.interfaces import BaseConfig
 from src.parse_utils import parse_log
-from src.utils import BaseToDict
+from src.url_stat import UrlStat
 
 logger = structlog.get_logger()
 
@@ -23,34 +21,6 @@ def create_generator(path: Path) -> Generator[str, None, None]:
     with f:
         for line in f:
             yield line.decode("utf-8")
-
-
-@dataclasses.dataclass
-class UrlStat(BaseToDict):
-    url: str
-    count: int = 0
-    count_perc: float = 0
-    _times: List[float] = dataclasses.field(default_factory=list)
-    time_sum: float = 0
-    time_perc: float = 0
-    time_avg: float = 0
-    time_max: float = 0
-    _time_min: float = 0
-    time_med: float = 0
-
-    def compute_values(self, count_total: int, time_total: float) -> None:
-        self.time_sum = sum(self._times)
-        self.time_avg = sum(self._times) / len(self._times)
-        self.time_max = max(self._times)
-        self._time_min = min(self._times)
-        self.time_med = median(self._times)
-
-        self.count_perc = self.count / count_total * 100
-        self.time_perc = self.time_sum / time_total * 100
-
-    @property
-    def times(self) -> List[float]:
-        return self._times
 
 
 class App:
@@ -68,8 +38,6 @@ class App:
 
         self.dir_log = dir_log
         self.dir_report = dir_report
-
-        self.urls_statistics: Dict[str, UrlStat] = dict()
 
     def get_last_log_path(self) -> tuple[Path | None, datetime | None]:
         last_log_path = None
@@ -102,7 +70,7 @@ class App:
         else:
             return None
 
-    def save_report(self, log_date: datetime) -> None:
+    def save_report(self, log_date: datetime, urls_statistics: Dict[str, UrlStat]) -> None:
         with open("report.html") as templ:
             content = templ.read()
 
@@ -112,7 +80,7 @@ class App:
             with open(report_path, "w", encoding="utf-8") as out:
                 out.write(
                     template.safe_substitute(
-                        {"table_json": json.dumps(sorted([log_stat.to_dict() for log_stat in self.urls_statistics.values()], key=lambda x: x["time_sum"], reverse=True))}
+                        {"table_json": json.dumps(sorted([log_stat.to_dict() for log_stat in urls_statistics.values()], key=lambda x: x["time_sum"], reverse=True))}
                     )
                 )
 
@@ -136,6 +104,8 @@ class App:
         errors_counter = 0
         time_total: float = 0
 
+        urls_statistics: Dict[str, UrlStat] = dict()
+
         for line in generator:
             lines_counter += 1
 
@@ -149,10 +119,10 @@ class App:
                 errors_counter += 1
                 continue
 
-            if log.url not in self.urls_statistics:
-                self.urls_statistics[log.url] = UrlStat(url=log.url)
+            if log.url not in urls_statistics:
+                urls_statistics[log.url] = UrlStat(url=log.url)
 
-            log_stat = self.urls_statistics[log.url]
+            log_stat = urls_statistics[log.url]
             log_stat.count += 1
             log_stat.times.append(log.duration)
 
@@ -162,11 +132,11 @@ class App:
             if lines_counter - errors_counter >= 1000:
                 break
 
-        for log_stat in self.urls_statistics.values():
+        for log_stat in urls_statistics.values():
             lines_correct_total = lines_counter - errors_counter
             log_stat.compute_values(lines_correct_total, time_total)
 
-        self.save_report(last_log_date)
+        self.save_report(last_log_date, urls_statistics)
 
         self.check_error_limit(lines_counter, errors_counter)
         return None
