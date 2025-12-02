@@ -88,15 +88,16 @@ class App:
         last_log_path, last_log_date = self.get_last_log_path()
 
         if last_log_path is None or last_log_date is None:
-            logger.info("File not found", log_path=last_log_path)
+            logger.info("File not found", path=last_log_path)
             return None
 
         exist_report_path = self.check_report_exists(last_log_date)
         if exist_report_path is not None:
-            logger.info("Report exists", report_path=exist_report_path)
+            logger.info("Report exists", path=exist_report_path)
+            logger.info("Cancel parse file", path=last_log_path)
             return None
 
-        logger.info("Start parse file", log_path=last_log_path)
+        logger.info("Start parse file", path=last_log_path)
 
         generator = create_generator(last_log_path)
 
@@ -112,7 +113,7 @@ class App:
             try:
                 log = parse_log(line)
             except ValueError:
-                logger.error("Parse error", log_path=last_log_path, line=line)
+                logger.error("Parse error", path=last_log_path, line=line)
                 log = None
 
             if log is None:
@@ -128,10 +129,6 @@ class App:
 
             time_total += log.duration
 
-            # TODO: delete
-            # if lines_counter - errors_counter >= 1000:
-            #     break
-
         for log_stat in urls_statistics.values():
             lines_correct_total = lines_counter - errors_counter
             log_stat.compute_values(lines_correct_total, time_total)
@@ -139,6 +136,8 @@ class App:
         self.save_report(last_log_date, urls_statistics)
 
         self.check_error_limit(lines_counter, errors_counter)
+
+        logger.info("End parse file", path=last_log_path)
         return None
 
     def check_error_limit(self, lines: int, errors: int) -> None:

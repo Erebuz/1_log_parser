@@ -17,3 +17,6 @@ test:
 
 build_docker:
 	docker build -t log-parser:latest .
+
+build_up_docker_compose:
+	docker compose up --build
