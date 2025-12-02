@@ -41,6 +41,7 @@ class Log:
     def __init__(self, **kwargs: str) -> None:
         for k, v in kwargs.items():
             if k == "request":
+                self.request = v
                 req_parts = v.split()
                 try:
                     method, url, protocol = req_parts
@@ -69,13 +70,16 @@ class Log:
             setattr(self, k, val)
 
 
-def parse_log(line: str) -> Log | None:
+def parse_log(line: str) -> Log:
     match = LOG_PATTERN.match(line)
     if not match:
-        return None
+        raise AttributeError("No match")
 
     match_data = match.groupdict()
 
-    data = Log(**match_data)
+    req = match_data.get("request", "")
+    if len(req.split()) != 3:
+        raise AttributeError("Request")
 
+    data = Log(**match_data)
     return data

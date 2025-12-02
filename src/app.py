@@ -104,11 +104,8 @@ class App:
 
             try:
                 log = parse_log(line)
-            except ValueError:
+            except (ValueError, AttributeError):
                 logger.error("Parse error", path=last_log_path, line=line)
-                log = None
-
-            if log is None:
                 errors_counter += 1
                 continue
 
