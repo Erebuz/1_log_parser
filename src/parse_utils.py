@@ -62,10 +62,7 @@ class Log:
             elif k == "duration":
                 val = float(v)
             elif k == "date":
-                try:
-                    val = datetime.strptime(v, "%d/%b/%Y:%H:%M:%S %z")
-                except ValueError:
-                    val = None
+                val = datetime.strptime(v, "%d/%b/%Y:%H:%M:%S %z")
             else:
                 val = v
 

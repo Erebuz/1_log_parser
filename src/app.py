@@ -8,20 +8,21 @@ from statistics import median
 from string import Template
 from typing import Dict, Generator, List
 
+import structlog
+
 from src.interfaces import BaseConfig
 from src.parse_utils import parse_log
 from src.utils import BaseToDict
 
+logger = structlog.get_logger()
+
 
 def create_generator(path: Path) -> Generator[str, None, None]:
-    if path.suffix == ".gz":
-        with gzip.open(path, "rb") as f:
-            for line in f:
-                yield line.decode("utf-8")
-    else:
-        with open(path, "rb") as f:
-            for line in f:
-                yield line.decode("utf-8")
+    f = gzip.open(path, "rb") if path.suffix == ".gz" else open(path, "rb")
+
+    with f:
+        for line in f:
+            yield line.decode("utf-8")
 
 
 @dataclasses.dataclass
@@ -56,8 +57,8 @@ class App:
     def __init__(self, root: str, config: BaseConfig):
         self.config = config
 
-        dir_log = Path(root, config["LOG_DIR"])
-        dir_report = Path(root, config["REPORT_DIR"])
+        dir_log = Path(root, config.get("LOG_DIR", "logs"))
+        dir_report = Path(root, config.get("REPORT_DIR", "reports"))
 
         if not dir_log.exists():
             raise FileNotFoundError(f"Log directory {dir_log} does not exist")
@@ -67,9 +68,6 @@ class App:
 
         self.dir_log = dir_log
         self.dir_report = dir_report
-
-        self.count_total: int = 0
-        self.time_total: float = 0
 
         self.urls_statistics: Dict[str, UrlStat] = dict()
 
@@ -94,12 +92,22 @@ class App:
 
         return last_log_path, last_log_date
 
+    def get_report_path(self, log_date: datetime) -> Path:
+        return self.dir_report.joinpath(f"report_{log_date.strftime('%Y.%m.%d')}.html")
+
+    def check_report_exists(self, log_date: datetime) -> Path | None:
+        report_path = self.get_report_path(log_date)
+        if report_path.exists():
+            return report_path
+        else:
+            return None
+
     def save_report(self, log_date: datetime) -> None:
         with open("report.html") as templ:
             content = templ.read()
 
             template = Template(content)
-            report_path = self.dir_report.joinpath(f"report_{log_date.strftime('%Y.%m.%d')}.html")
+            report_path = self.get_report_path(log_date)
 
             with open(report_path, "w", encoding="utf-8") as out:
                 out.write(
@@ -112,15 +120,33 @@ class App:
         last_log_path, last_log_date = self.get_last_log_path()
 
         if last_log_path is None or last_log_date is None:
+            logger.info("File not found", log_path=last_log_path)
             return None
+
+        exist_report_path = self.check_report_exists(last_log_date)
+        if exist_report_path is not None:
+            logger.info("Report exists", report_path=exist_report_path)
+            return None
+
+        logger.info("Start parse file", log_path=last_log_path)
 
         generator = create_generator(last_log_path)
 
+        lines_counter = 0
+        errors_counter = 0
+        time_total: float = 0
+
         for line in generator:
-            log = parse_log(line)
+            lines_counter += 1
+
+            try:
+                log = parse_log(line)
+            except ValueError:
+                logger.error("Parse error", log_path=last_log_path, line=line)
+                log = None
 
             if log is None:
-                print("error parsing log")
+                errors_counter += 1
                 continue
 
             if log.url not in self.urls_statistics:
@@ -129,15 +155,31 @@ class App:
             log_stat = self.urls_statistics[log.url]
             log_stat.count += 1
             log_stat.times.append(log.duration)
-            self.count_total += 1
-            self.time_total += log.duration
+
+            time_total += log.duration
 
             # TODO: delete
-            if self.count_total > 1000:
+            if lines_counter - errors_counter >= 1000:
                 break
 
         for log_stat in self.urls_statistics.values():
-            log_stat.compute_values(self.count_total, self.time_total)
+            lines_correct_total = lines_counter - errors_counter
+            log_stat.compute_values(lines_correct_total, time_total)
 
         self.save_report(last_log_date)
+
+        self.check_error_limit(lines_counter, errors_counter)
         return None
+
+    def check_error_limit(self, lines: int, errors: int) -> None:
+        error_percent = round(errors / lines * 100, 2) if lines > 0 else 0
+
+        limit = self.config.get("ERROR_LIMIT", None)
+
+        if limit is not None and error_percent > limit:
+            logger.info(
+                "The error limit has been exceeded",
+                number_of_errors=errors,
+                number_of_line=lines,
+                percentage_of_errors=round(errors / lines * 100, 2) if lines > 0 else 0,
+            )

@@ -1,2 +1,4 @@
 LOG_DIR: logs
 REPORT_DIR: reports
+#PARSE_LOG_PATH: parse_log.txt
+ERROR_LIMIT: 10
