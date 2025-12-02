@@ -11,3 +11,6 @@ run:
 
 lint:
 	pre-commit run --all-files --color=never
+
+test:
+	uv run pytest
