@@ -1,5 +1,7 @@
+import gzip
 from datetime import datetime
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, Generator
 
 
 class BaseToDict:
@@ -18,3 +20,11 @@ class BaseToDict:
 
     def to_dict(self, deep: bool = False) -> Dict[str, Any]:
         return {k: self._to_dict(v, deep) for k, v in self.__dict__.items() if not k.startswith("_")}
+
+
+def create_generator(path: Path) -> Generator[str, None, None]:
+    f = gzip.open(path, "rb") if path.suffix == ".gz" else open(path, "rb")
+
+    with f:
+        for line in f:
+            yield line.decode("utf-8")

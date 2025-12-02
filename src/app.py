@@ -1,26 +1,18 @@
-import gzip
 import json
 import re
 from datetime import datetime
 from pathlib import Path
 from string import Template
-from typing import Dict, Generator
+from typing import Dict
 
 import structlog
 
 from src.interfaces import BaseConfig
 from src.parse_utils import parse_log
 from src.url_stat import UrlStat
+from src.utils import create_generator
 
 logger = structlog.get_logger()
-
-
-def create_generator(path: Path) -> Generator[str, None, None]:
-    f = gzip.open(path, "rb") if path.suffix == ".gz" else open(path, "rb")
-
-    with f:
-        for line in f:
-            yield line.decode("utf-8")
 
 
 class App:
